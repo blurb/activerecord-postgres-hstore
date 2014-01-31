@@ -200,7 +200,11 @@ module ActiveRecord
       def quote_with_hstore(value, column = nil)
         if value && column && column.sql_type == 'hstore'
           raise HstoreTypeMismatch, "#{column.name} must have a Hash or a valid hstore value (#{value})" unless value.kind_of?(Hash) || value.valid_hstore?
-          return quote_without_hstore(value.to_hstore, column)
+          # originally: return quote_without_hstore(value.to_hstore, column)
+          # the original quote prefix the string with escape prefix ('E') and causing value containing double quote (") to fail
+          # this works: insert into htest (hstore_col) values ('"y" => "456", "b" => "he says, \"hello\""')
+          # this fails: insert into htest (hstore_col) values (E'"y" => "456", "b" => "he says, \"hello\""')
+          return "'#{quote_string(value.to_hstore)}'" # so we return string without 'E' prefix but quote the internal values
         end
         quote_without_hstore(value,column)
       end
